@@ -35,6 +35,28 @@ QuickPeek gives you one fast place to monitor the public numbers you actually ca
 - macOS 14.0 or newer
 - Xcode 16.3 or newer if you want to build from source
 
+## Download
+
+You can grab the latest `.zip` from [GitHub Releases](https://github.com/dodo-reach/QuickPeek/releases).
+
+### About The macOS Warning
+
+QuickPeek is currently distributed without Apple's paid Developer ID / notarization flow.
+
+That means macOS may show the classic "Apple could not verify this app" warning the first time you open it. That is annoying, but it does **not** mean the app is malware. It means the app was shipped directly by the developer instead of through Apple's paid trust pipeline.
+
+If you want to use QuickPeek, you have two easy options:
+
+- Download the zip from this repository and open the app with `Right click > Open`
+- If macOS blocks it, go to `System Settings > Privacy & Security` and click `Open Anyway`
+
+If that still feels too sketchy for you, that is fair:
+
+- Build it yourself from source in Xcode
+- Or keep opening the same apps ten times a day to check if a number changed
+
+QuickPeek is trying to help with the second one. NGMI otherwise.
+
 ## Build From Source
 
 ```bash
@@ -57,7 +79,7 @@ That generates `dist/QuickPeek-macOS.zip`.
 
 - QuickPeek is designed for public metrics, not private dashboard access
 - Some platforms use scraping fallbacks, so they may occasionally break when a site changes
-- If you ship public binaries, notarization is still the right final step for the smoothest first-launch experience on users' Macs
+- GitHub release builds are currently not notarized, so first launch on macOS may require `Open Anyway`
 
 ## License
 
