@@ -1,0 +1,67 @@
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+## User-specific
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/
+
+## Scripts
+*.pyc
+*.pyo
+
+## Build results
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.bak
+*.orig
+*.swp
+*~
+*.nib
+*.log
+
+## CocoaPods
+#
+# We recommend against adding the Pods directory to your repository. However, if you'd like to include it,
+# remove the /Pods/ line below.
+/Pods/
+
+## Carthage
+/Carthage/Build/
+
+## AccuRev
+.accurev/
+
+## Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+## Code Injection
+.injection/
+
+## Other
+.DS_Store
+.svn
+.idea
+.vscode
+.codex/
+dist/
+*.xcresult
+*.tmproj
+*.xcworkspace/xcshareddata/SwiftPM/package.resolved

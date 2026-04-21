@@ -5,6 +5,9 @@ enum APIError: LocalizedError {
     case badURL
     case missingKey(String)
     case http(Int)
+    case rateLimited(status: Int, retryAfter: String?)
+    case sourceFormatChanged(source: String, detail: String)
+    case incompleteResponse(source: String, detail: String)
     case decodingError
     
     var errorDescription: String? {
@@ -12,6 +15,15 @@ enum APIError: LocalizedError {
         case .badURL: return "Invalid URL or ID"
         case .missingKey(let platform): return "Missing API Key for \(platform)"
         case .http(let status): return "Server error: \(status)"
+        case .rateLimited(let status, let retryAfter):
+            if let retryAfter, !retryAfter.isEmpty {
+                return "Rate limited (\(status)). Retry after \(retryAfter)s"
+            }
+            return "Rate limited (\(status))"
+        case .sourceFormatChanged(let source, let detail):
+            return "\(source) format changed: \(detail)"
+        case .incompleteResponse(let source, let detail):
+            return "\(source) response incomplete: \(detail)"
         case .decodingError: return "Failed to parse server response"
         }
     }
@@ -22,6 +34,10 @@ struct GitHubRepo: Codable {
     let stargazers_count: Int
     let forks_count: Int
     let subscribers_count: Int
+}
+
+struct GitHubSearchResponse: Codable {
+    let total_count: Int
 }
 
 // MARK: - Reddit
@@ -61,6 +77,12 @@ struct XTweetResponse: Codable {
         let public_metrics: Metrics
     }
     let data: DataObj
+}
+
+// MARK: - Bluesky
+struct BlueskyProfileResponse: Codable {
+    let followersCount: Int
+    let postsCount: Int
 }
 
 // MARK: - YouTube
