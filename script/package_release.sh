@@ -54,6 +54,8 @@ if [[ ! -d "$APP_BUNDLE" ]]; then
   exit 1
 fi
 
-/usr/bin/ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+# Strip Finder/APFS metadata so the public zip does not contain `._*` files.
+/usr/bin/xattr -cr "$APP_BUNDLE"
+/usr/bin/ditto -c -k --keepParent --norsrc --noextattr --noqtn --noacl "$APP_BUNDLE" "$ZIP_PATH"
 
 echo "Packaged $ZIP_PATH"
