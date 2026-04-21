@@ -23,6 +23,13 @@ struct MetricService {
                 }
             }
             return try await WebScraper.fetchYouTubeSubs(identifier: identifier)
+        case .youtubeVideoViews, .youtubeVideoLikes:
+            let videoID = URLCleaner.extractYouTubeVideoID(urlOrID)
+            logger.info("Fetching YouTube video metric for input=\(urlOrID, privacy: .public) normalized=\(videoID, privacy: .public) metric=\(category.rawValue, privacy: .public)")
+            return try await WebScraper.fetchYouTubeVideoMetric(videoID: videoID, category: category)
+        case .tiktokFollowers, .tiktokTotalLikes, .tiktokVideoViews, .tiktokVideoLikes:
+            logger.info("Fetching TikTok metric for input=\(urlOrID, privacy: .public) metric=\(category.rawValue, privacy: .public)")
+            return try await WebScraper.fetchTikTokMetric(input: urlOrID, category: category)
         case .xFollowers, .xPostLikes:
             if !xToken.isEmpty {
                 return try await fetchXAPI(urlOrID: urlOrID, category: category, token: xToken)

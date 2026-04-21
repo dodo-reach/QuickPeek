@@ -16,7 +16,8 @@ QuickPeek gives you one fast place to monitor the public numbers you actually ca
 
 - GitHub: stars, forks, watchers, open issues, open pull requests
 - Reddit: subreddit subscribers, user karma, post upvotes
-- YouTube: channel subscribers
+- YouTube: channel subscribers, video views, video likes
+- TikTok: profile followers, profile total likes, video views, video likes
 - X: followers, post likes
 - Bluesky: followers, posts
 - npm: weekly downloads
@@ -79,6 +80,8 @@ That generates `dist/QuickPeek-macOS.zip`.
 
 - QuickPeek is designed for public metrics, not private dashboard access
 - Some platforms use scraping fallbacks, so they may occasionally break when a site changes
+- TikTok support uses public embed pages only; private or age-restricted profiles/videos are not supported
+- Facebook post/reel likes are intentionally not supported yet because the no-login public path is not stable enough for a trust-first release
 - GitHub release builds are currently not notarized, so first launch on macOS may require `Open Anyway`
 
 ## License

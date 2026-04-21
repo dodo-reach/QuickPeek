@@ -125,11 +125,11 @@ struct AddTrackerSheet: View {
                         .foregroundStyle(.secondary)
                         .padding(.top, -8)
                     
-                    if selectedType == .instagram {
+                    if selectedType == .instagram || selectedType == .tiktok {
                         HStack(spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
-                            Text("Only public accounts/posts are supported.")
+                            Text(selectedType == .tiktok ? "Only public profiles/videos are supported." : "Only public accounts/posts are supported.")
                                 .font(.caption.bold())
                                 .foregroundStyle(.orange)
                         }
@@ -219,6 +219,9 @@ struct AddTrackerSheet: View {
             case .youtube:
                 selectedCategories = [.youtubeSubscribers]
                 return
+            case .tiktok:
+                selectedCategories = [.tiktokFollowers]
+                return
             case .x:
                 selectedCategories = [.xFollowers]
                 return
@@ -239,9 +242,21 @@ struct AddTrackerSheet: View {
             else if lower.contains("/user/") || lower.contains("/u/") { selectedCategories = [.redditTotalKarma] }
             else { selectedCategories = [.redditSubscribers] }
         }
-        else if lower.contains("youtube.com") || lower.contains("youtu.be") || lower.hasPrefix("uc") { 
+        else if lower.contains("youtube.com/watch") || lower.contains("youtube.com/shorts/") || lower.contains("youtu.be/") {
             selectedType = .youtube 
+            selectedCategories = [.youtubeVideoViews]
+        }
+        else if lower.contains("youtube.com") || lower.hasPrefix("uc") {
+            selectedType = .youtube
             selectedCategories = [.youtubeSubscribers]
+        }
+        else if lower.contains("tiktok.com") {
+            selectedType = .tiktok
+            if lower.contains("/video/") || (lower.contains("/embed/") && !lower.contains("/embed/@")) {
+                selectedCategories = [.tiktokVideoViews]
+            } else {
+                selectedCategories = [.tiktokFollowers]
+            }
         }
         else if lower.contains("x.com") || lower.contains("twitter.com") { 
             selectedType = .x 
@@ -276,7 +291,8 @@ struct AddTrackerSheet: View {
     
     private var inputLabel: String {
         switch selectedType {
-        case .youtube: return "CHANNEL"
+        case .youtube: return selectedCategories.contains(.youtubeSubscribers) ? "CHANNEL" : "VIDEO"
+        case .tiktok: return selectedCategories.contains(.tiktokFollowers) || selectedCategories.contains(.tiktokTotalLikes) ? "PROFILE" : "VIDEO"
         case .x: return selectedCategories.contains(.xFollowers) ? "USERNAME" : "POST LINK OR ID"
         case .bluesky: return "HANDLE OR PROFILE URL"
         case .npm: return "PACKAGE NAME OR URL"
@@ -288,7 +304,10 @@ struct AddTrackerSheet: View {
     
     private var inputPlaceholder: String {
         switch selectedType {
-        case .youtube: return "@handle, channel URL, or UC..."
+        case .youtube:
+            return selectedCategories.contains(.youtubeSubscribers) ? "@handle, channel URL, or UC..." : "watch URL, shorts URL, or video ID"
+        case .tiktok:
+            return selectedCategories.contains(.tiktokFollowers) || selectedCategories.contains(.tiktokTotalLikes) ? "@handle or profile URL" : "video URL or video ID"
         case .x: return selectedCategories.contains(.xFollowers) ? "@username" : "Post URL or ID"
         case .bluesky: return "@handle, handle.bsky.social, or bsky.app/profile/..."
         case .npm: return "e.g. react"
@@ -304,7 +323,14 @@ struct AddTrackerSheet: View {
         case .reddit: return "Enter a subreddit, user profile, or post link."
         case .x: return "Enter a profile handle (@name) or a direct status link."
         case .bluesky: return "Enter a Bluesky handle, DID, or profile URL."
-        case .youtube: return "Enter a handle, channel URL, or channel ID."
+        case .youtube:
+            return selectedCategories.contains(.youtubeSubscribers)
+                ? "Enter a handle, channel URL, or channel ID."
+                : "Enter a public watch link, Shorts link, or video ID."
+        case .tiktok:
+            return selectedCategories.contains(.tiktokFollowers) || selectedCategories.contains(.tiktokTotalLikes)
+                ? "Enter a public TikTok handle or profile URL."
+                : "Enter a public TikTok video link or video ID."
         case .npm: return "Enter a package name or the full npmjs.com URL."
         case .discord: return "Paste a public invitation link."
         case .instagram: return "Enter a public profile username or a direct post link."
@@ -315,6 +341,10 @@ struct AddTrackerSheet: View {
         switch selectedType {
         case .reddit:
             return "Subreddit, user, and post metrics use different inputs, so only one mode can be active at a time."
+        case .youtube:
+            return "Channel subscribers and video likes/views come from different inputs, so choose one mode at a time."
+        case .tiktok:
+            return "Profile followers/total likes and video likes/views come from different public pages, so choose one mode at a time."
         case .x:
             return "Profile followers and post likes come from different inputs, so choose one mode at a time."
         case .instagram:

@@ -133,7 +133,7 @@ struct ContentView: View {
             Text("Ready to track?")
                 .font(.headline)
             
-            Text("Add your first project from GitHub, Reddit, YouTube, or Bluesky to begin monitoring your growth.")
+            Text("Add your first public metric from GitHub, Reddit, YouTube, TikTok, or Bluesky to begin monitoring your growth.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -340,10 +340,20 @@ struct TrackerCard: View {
             return "YouTube Format Changed"
         }
 
+        if lowercased.contains("tiktok format changed") {
+            return "TikTok Format Changed"
+        }
+
+        if lowercased.contains("tiktok response incomplete") {
+            return "TikTok Response Incomplete"
+        }
+
         if lowercased.contains("failed to parse") {
             switch tracker.type {
             case .youtube:
                 return "YouTube Parsing Issue"
+            case .tiktok:
+                return "TikTok Parsing Issue"
             case .github:
                 return "GitHub Response Changed"
             default:
@@ -377,10 +387,20 @@ struct TrackerCard: View {
             return "YouTube returned the page, but the subscriber count was not where our scraper expected it. This points more to an inconsistent or changed page format than to a generic parsing bug."
         }
 
+        if lowercased.contains("tiktok response incomplete") {
+            return "TikTok replied, but the public embed page did not include the full state we need. This can happen when an embed is unavailable for that profile or video."
+        }
+
+        if lowercased.contains("tiktok format changed") {
+            return "TikTok returned the embed page, but the metric field we expected was missing or moved."
+        }
+
         if lowercased.contains("failed to parse") {
             switch tracker.type {
             case .youtube:
                 return "YouTube returned page data in a format we could not read this time. Subscriber tracking is more scrape-based than most other sources."
+            case .tiktok:
+                return "TikTok returned a public embed page, but the metric fields did not match the format we expected."
             case .github where metric.category == .githubIssues || metric.category == .githubPullRequests:
                 return "GitHub search or its HTML fallback returned a response that did not match the expected format."
             case .github:

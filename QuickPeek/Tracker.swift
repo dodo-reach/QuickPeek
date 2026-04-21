@@ -60,7 +60,7 @@ struct MetricValue: Identifiable, Codable, Equatable {
 }
 
 enum MetricType: String, Codable, CaseIterable, Identifiable {
-    case github, reddit, youtube, x, bluesky, npm, discord, instagram
+    case github, reddit, youtube, tiktok, x, bluesky, npm, discord, instagram
     
     var id: String { rawValue }
     
@@ -69,6 +69,7 @@ enum MetricType: String, Codable, CaseIterable, Identifiable {
         case .github: return "GitHub"
         case .reddit: return "Reddit"
         case .youtube: return "YouTube"
+        case .tiktok: return "TikTok"
         case .x: return "X (Twitter)"
         case .bluesky: return "Bluesky"
         case .npm: return "npm"
@@ -82,6 +83,7 @@ enum MetricType: String, Codable, CaseIterable, Identifiable {
         case .github: return "star.fill"
         case .reddit: return "r.circle.fill"
         case .youtube: return "play.rectangle.fill"
+        case .tiktok: return "music.note.tv.fill"
         case .x: return "bird.fill"
         case .bluesky: return "cloud.fill"
         case .npm: return "shippingbox.fill"
@@ -94,7 +96,8 @@ enum MetricType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .github: return [.githubStars, .githubForks, .githubWatchers, .githubIssues, .githubPullRequests]
         case .reddit: return [.redditSubscribers, .redditTotalKarma, .redditPostUpvotes]
-        case .youtube: return [.youtubeSubscribers]
+        case .youtube: return [.youtubeSubscribers, .youtubeVideoViews, .youtubeVideoLikes]
+        case .tiktok: return [.tiktokFollowers, .tiktokTotalLikes, .tiktokVideoViews, .tiktokVideoLikes]
         case .x: return [.xFollowers, .xPostLikes]
         case .bluesky: return [.blueskyFollowers, .blueskyPosts]
         case .npm: return [.npmDownloads]
@@ -111,7 +114,8 @@ enum MetricType: String, Codable, CaseIterable, Identifiable {
 enum MetricCategory: String, Codable, CaseIterable, Identifiable {
     case githubStars, githubForks, githubWatchers, githubIssues, githubPullRequests
     case redditSubscribers, redditTotalKarma, redditPostUpvotes
-    case youtubeSubscribers
+    case youtubeSubscribers, youtubeVideoViews, youtubeVideoLikes
+    case tiktokFollowers, tiktokTotalLikes, tiktokVideoViews, tiktokVideoLikes
     case xFollowers, xPostLikes
     case blueskyFollowers, blueskyPosts
     case npmDownloads
@@ -131,6 +135,12 @@ enum MetricCategory: String, Codable, CaseIterable, Identifiable {
         case .redditTotalKarma: return "Karma"
         case .redditPostUpvotes: return "Upvotes"
         case .youtubeSubscribers: return "Subscribers"
+        case .youtubeVideoViews: return "Video Views"
+        case .youtubeVideoLikes: return "Video Likes"
+        case .tiktokFollowers: return "Followers"
+        case .tiktokTotalLikes: return "Total Likes"
+        case .tiktokVideoViews: return "Video Views"
+        case .tiktokVideoLikes: return "Video Likes"
         case .xFollowers: return "Followers"
         case .xPostLikes: return "Likes"
         case .blueskyFollowers: return "Followers"
@@ -156,6 +166,12 @@ enum MetricCategory: String, Codable, CaseIterable, Identifiable {
             return .post
         case .youtubeSubscribers:
             return .channel
+        case .youtubeVideoViews, .youtubeVideoLikes:
+            return .post
+        case .tiktokFollowers, .tiktokTotalLikes:
+            return .profile
+        case .tiktokVideoViews, .tiktokVideoLikes:
+            return .post
         case .xFollowers:
             return .profile
         case .xPostLikes:

@@ -47,6 +47,46 @@ struct WebScraper {
             throw APIError.sourceFormatChanged(source: "YouTube", detail: "subscriber count missing from fallback HTML [snapshot: \(snapshotPath.path)]")
         }
     }
+
+    static func fetchYouTubeVideoMetric(videoID: String, category: MetricCategory) async throws -> Int {
+        guard !videoID.isEmpty else { throw APIError.badURL }
+        guard let url = URL(string: "https://www.youtube.com/watch?v=\(videoID)") else { throw APIError.badURL }
+
+        let headers = [
+            "Accept-Language": youTubeAcceptLanguage,
+            "Cookie": youTubeConsentCookie,
+            "Referer": "https://www.youtube.com/"
+        ]
+        let html = try await fetchHTML(from: url, headers: headers)
+
+        if isYouTubeConsentPage(html) {
+            throw APIError.incompleteResponse(source: "YouTube", detail: "consent wall or anti-bot page on watch page")
+        }
+
+        let patterns: [String]
+        switch category {
+        case .youtubeVideoViews:
+            patterns = [
+                "itemprop=\"interactionType\" content=\"https://schema\\.org/WatchAction\".*?itemprop=\"userInteractionCount\" content=\"([0-9]+)\"",
+                "\"viewCount\":\"([0-9]+)\""
+            ]
+        case .youtubeVideoLikes:
+            patterns = [
+                "itemprop=\"interactionType\" content=\"https://schema\\.org/LikeAction\".*?itemprop=\"userInteractionCount\" content=\"([0-9]+)\"",
+                "\"likeCount\":\"([0-9]+)\""
+            ]
+        default:
+            throw APIError.badURL
+        }
+
+        for pattern in patterns {
+            if let count = try? parseInteger(from: html, pattern: pattern) {
+                return count
+            }
+        }
+
+        throw APIError.sourceFormatChanged(source: "YouTube", detail: "video metric missing from public watch page")
+    }
     
     static func fetchGitHubMetric(url: String, category: MetricCategory) async throws -> Int {
         let path = URLCleaner.cleanGitHubPath(url)
@@ -121,6 +161,50 @@ struct WebScraper {
         }
         
         return try parseCount(from: html, pattern: pattern)
+    }
+
+    static func fetchTikTokMetric(input: String, category: MetricCategory) async throws -> Int {
+        let embedURLString: String
+        let keyPathRoot: String
+
+        switch category {
+        case .tiktokFollowers, .tiktokTotalLikes:
+            guard !URLCleaner.cleanTikTokHandle(input).isEmpty else { throw APIError.badURL }
+            embedURLString = URLCleaner.tikTokProfileEmbedURL(from: input)
+            keyPathRoot = "userInfo"
+        case .tiktokVideoViews, .tiktokVideoLikes:
+            guard !URLCleaner.extractTikTokVideoID(input).isEmpty else { throw APIError.badURL }
+            embedURLString = URLCleaner.tikTokVideoEmbedURL(from: input)
+            keyPathRoot = "itemInfos"
+        default:
+            throw APIError.badURL
+        }
+
+        guard let url = URL(string: embedURLString) else { throw APIError.badURL }
+        let html = try await fetchHTML(from: url)
+        let state = try extractTikTokFrontityState(from: html)
+
+        let scope = findValue(forKey: keyPathRoot, in: state) ?? state
+        let key: String
+
+        switch category {
+        case .tiktokFollowers:
+            key = "followerCount"
+        case .tiktokTotalLikes:
+            key = "heartCount"
+        case .tiktokVideoViews:
+            key = "playCount"
+        case .tiktokVideoLikes:
+            key = "diggCount"
+        default:
+            throw APIError.badURL
+        }
+
+        if let count = integerValue(forKey: key, in: scope) {
+            return count
+        }
+
+        throw APIError.sourceFormatChanged(source: "TikTok", detail: "metric \(key) missing from public embed page")
     }
     
     // MARK: - Helpers
@@ -280,6 +364,21 @@ struct WebScraper {
         
         return value
     }
+
+    private static func parseInteger(from html: String, pattern: String) throws -> Int {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else {
+            throw APIError.decodingError
+        }
+
+        let cleaned = String(html[range]).replacingOccurrences(of: ",", with: "")
+        guard let value = Int(cleaned), value >= 0 else {
+            throw APIError.decodingError
+        }
+
+        return value
+    }
     
     static func parseRoundedCount(_ string: String) -> Int {
         let normalizedWhitespace = string.unicodeScalars.map { scalar in
@@ -352,6 +451,20 @@ struct WebScraper {
             }
         }
         
+        return nil
+    }
+
+    private static func integerValue(forKey key: String, in object: Any) -> Int? {
+        guard let value = findValue(forKey: key, in: object) else { return nil }
+        if let intValue = value as? Int {
+            return intValue
+        }
+        if let doubleValue = value as? Double {
+            return Int(doubleValue)
+        }
+        if let stringValue = value as? String {
+            return Int(stringValue.replacingOccurrences(of: ",", with: ""))
+        }
         return nil
     }
 
@@ -485,6 +598,22 @@ struct WebScraper {
         }
         
         return nil
+    }
+
+    private static func extractTikTokFrontityState(from html: String) throws -> [String: Any] {
+        guard let jsonString = firstMatch(
+            in: html,
+            pattern: "<script id=\"__FRONTITY_CONNECT_STATE__\" type=\"application/json\">(.*?)</script>"
+        ) else {
+            throw APIError.incompleteResponse(source: "TikTok", detail: "missing embedded state")
+        }
+
+        let data = Data(jsonString.utf8)
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.decodingError
+        }
+
+        return object
     }
 
     private static func isYouTubeConsentPage(_ html: String) -> Bool {

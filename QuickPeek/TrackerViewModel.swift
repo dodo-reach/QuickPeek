@@ -27,19 +27,20 @@ class TrackerViewModel: ObservableObject {
         do {
             let loadedTrackers = try JSONDecoder().decode([Tracker].self, from: data)
             
-            // Automatic Merging logic: Group by urlOrID and merge metrics
+            // Merge logical duplicates that point to the same source entity.
             var mergedMap = [String: Tracker]()
             for tracker in loadedTrackers {
-                if var existing = mergedMap[tracker.urlOrID] {
+                let key = Self.trackerIdentityKey(type: tracker.type, input: tracker.urlOrID, categories: tracker.metrics.map(\.category))
+                if var existing = mergedMap[key] {
                     // Combine metrics, avoiding duplicates by category label
                     for metric in tracker.metrics {
                         if !existing.metrics.contains(where: { $0.category == metric.category }) {
                             existing.metrics.append(metric)
                         }
                     }
-                    mergedMap[tracker.urlOrID] = existing
+                    mergedMap[key] = existing
                 } else {
-                    mergedMap[tracker.urlOrID] = tracker
+                    mergedMap[key] = tracker
                 }
             }
             
@@ -63,6 +64,28 @@ class TrackerViewModel: ObservableObject {
     func addTracker(urlOrID: String, type: MetricType, categories: [MetricCategory], customName: String) {
         let name = customName.isEmpty ? extractDisplayName(from: urlOrID, type: type) : customName
         let metrics = categories.map { MetricValue(category: $0) }
+        let identityKey = Self.trackerIdentityKey(type: type, input: urlOrID, categories: categories)
+
+        if let existingIndex = trackers.firstIndex(where: {
+            Self.trackerIdentityKey(type: $0.type, input: $0.urlOrID, categories: $0.metrics.map(\.category)) == identityKey
+        }) {
+            for metric in metrics where !trackers[existingIndex].metrics.contains(where: { $0.category == metric.category }) {
+                trackers[existingIndex].metrics.append(metric)
+            }
+
+            if !customName.isEmpty {
+                trackers[existingIndex].name = customName
+            }
+
+            save()
+
+            let trackerID = trackers[existingIndex].id
+            Task {
+                await refreshTracker(id: trackerID)
+            }
+            return
+        }
+
         let tracker = Tracker(name: name, urlOrID: urlOrID, type: type, metrics: metrics)
         trackers.append(tracker)
         save()
@@ -86,7 +109,23 @@ class TrackerViewModel: ObservableObject {
         var urlString = tracker.urlOrID
         switch tracker.type {
         case .youtube:
-            urlString = URLCleaner.youTubeChannelURL(from: tracker.urlOrID)
+            if tracker.metrics.contains(where: { $0.category == .youtubeVideoViews || $0.category == .youtubeVideoLikes }) {
+                let videoID = URLCleaner.extractYouTubeVideoID(tracker.urlOrID)
+                urlString = videoID.isEmpty ? tracker.urlOrID : "https://www.youtube.com/watch?v=\(videoID)"
+            } else {
+                urlString = URLCleaner.youTubeChannelURL(from: tracker.urlOrID)
+            }
+        case .tiktok:
+            if tracker.metrics.contains(where: { $0.category == .tiktokVideoViews || $0.category == .tiktokVideoLikes }) {
+                if tracker.urlOrID.contains("tiktok.com/") {
+                    urlString = tracker.urlOrID
+                } else {
+                    let videoID = URLCleaner.extractTikTokVideoID(tracker.urlOrID)
+                    urlString = videoID.isEmpty ? tracker.urlOrID : URLCleaner.tikTokVideoEmbedURL(from: tracker.urlOrID)
+                }
+            } else {
+                urlString = URLCleaner.tikTokProfileURL(from: tracker.urlOrID)
+            }
         case .x:
             if tracker.metrics.contains(where: { $0.category == .xPostLikes }) {
                 if !urlString.contains("x.com") && !urlString.contains("twitter.com") {
@@ -128,7 +167,11 @@ class TrackerViewModel: ObservableObject {
     private func refreshTracker(id: UUID, spinnerManagedExternally: Bool) async {
         if !spinnerManagedExternally {
             refreshingTrackerIDs.insert(id)
-            defer { refreshingTrackerIDs.remove(id) }
+        }
+        defer {
+            if !spinnerManagedExternally {
+                refreshingTrackerIDs.remove(id)
+            }
         }
 
         guard let index = trackers.firstIndex(where: { $0.id == id }) else { return }
@@ -212,8 +255,13 @@ class TrackerViewModel: ObservableObject {
             let handle = URLCleaner.cleanBlueskyHandle(string)
             return handle.hasPrefix("did:") ? "Bluesky Profile" : "@\(handle)"
         case .youtube:
+            if URLCleaner.isYouTubeVideoInput(string) {
+                return "YouTube Video"
+            }
             let identifier = URLCleaner.cleanYouTubeIdentifier(string)
             return identifier.isEmpty ? "YouTube Channel" : identifier
+        case .tiktok:
+            return URLCleaner.isTikTokVideoInput(string) ? "TikTok Video" : "@\(URLCleaner.cleanTikTokHandle(string))"
         case .npm: return URLCleaner.cleanNpmName(string)
         case .discord: return "Discord Server"
         case .instagram:
@@ -228,6 +276,74 @@ class TrackerViewModel: ObservableObject {
             youtubeKey: youtubeAPIKey,
             xToken: xBearerToken
         )
+    }
+
+    static func trackerIdentityKey(type: MetricType, input: String, categories: [MetricCategory]) -> String {
+        let selectionGroup = categories.first?.selectionGroup ?? type.availableCategories.first?.selectionGroup ?? .profile
+        let trimmedInput = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedInput: String
+
+        switch type {
+        case .github:
+            normalizedInput = URLCleaner.cleanGitHubPath(trimmedInput).lowercased()
+        case .reddit:
+            switch selectionGroup {
+            case .subreddit, .userProfile:
+                normalizedInput = (URLCleaner.cleanRedditHandle(trimmedInput) ?? trimmedInput).lowercased()
+            case .post:
+                normalizedInput = trimmedInput.components(separatedBy: "/comments/").last?
+                    .components(separatedBy: "/")
+                    .first?
+                    .lowercased() ?? trimmedInput.lowercased()
+            default:
+                normalizedInput = trimmedInput.lowercased()
+            }
+        case .youtube:
+            switch selectionGroup {
+            case .channel:
+                let identifier = URLCleaner.cleanYouTubeIdentifier(trimmedInput)
+                normalizedInput = identifier.hasPrefix("@") ? identifier.lowercased() : identifier
+            case .post:
+                normalizedInput = URLCleaner.extractYouTubeVideoID(trimmedInput)
+            default:
+                normalizedInput = trimmedInput
+            }
+        case .tiktok:
+            switch selectionGroup {
+            case .profile:
+                normalizedInput = URLCleaner.cleanTikTokHandle(trimmedInput).lowercased()
+            case .post:
+                normalizedInput = URLCleaner.extractTikTokVideoID(trimmedInput)
+            default:
+                normalizedInput = trimmedInput.lowercased()
+            }
+        case .x:
+            switch selectionGroup {
+            case .profile:
+                normalizedInput = URLCleaner.cleanXUsername(trimmedInput).lowercased()
+            case .post:
+                normalizedInput = URLCleaner.extractXTweetID(trimmedInput)
+            default:
+                normalizedInput = trimmedInput.lowercased()
+            }
+        case .bluesky:
+            normalizedInput = URLCleaner.cleanBlueskyHandle(trimmedInput).lowercased()
+        case .npm:
+            normalizedInput = URLCleaner.cleanNpmName(trimmedInput).lowercased()
+        case .discord:
+            normalizedInput = URLCleaner.cleanDiscordCode(trimmedInput).lowercased()
+        case .instagram:
+            switch selectionGroup {
+            case .profile:
+                normalizedInput = URLCleaner.cleanInstagramHandle(trimmedInput).lowercased()
+            case .post:
+                normalizedInput = URLCleaner.cleanInstagramPostURL(trimmedInput)
+            default:
+                normalizedInput = trimmedInput.lowercased()
+            }
+        }
+
+        return "\(type.rawValue)|\(selectionGroup.rawValue)|\(normalizedInput)"
     }
 
     private func loadSecrets() {
