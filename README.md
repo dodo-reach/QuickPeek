@@ -2,7 +2,7 @@
 
 QuickPeek is a tiny macOS menu bar app for people who keep wasting attention on the same pages over and over.
 
-GitHub stars. YouTube subscribers. Bluesky followers. npm downloads. That one post you know is not moving every five minutes, but you still check anyway.
+GitHub stars. X followers. YouTube subscribers. Bluesky followers. npm downloads. That one post you know is not moving every five minutes, but you still check anyway.
 
 QuickPeek keeps the numbers in your menu bar so you can stop donating focus to platforms that love being checked.
 
@@ -55,7 +55,7 @@ If that still feels too sketchy for you, that is fair:
 - Build it yourself from source in Xcode
 - Or keep opening the same apps ten times a day to check if a number changed
 
-QuickPeek is trying to help with the second one. NGMI otherwise.
+QuickPeek is trying to help with the second one. Do what you want now.
 
 ## Build From Source
 
