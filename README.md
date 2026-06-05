@@ -4,6 +4,16 @@ QuickPeek is a small macOS menu bar app for keeping useful public metrics close 
 
 It stores trackers locally, refreshes them on demand, and opens the original source when you click a tracker.
 
+## Preview
+
+<p align="center">
+  <img src="docs/assets/quickpeek-preview-trackers.png" alt="QuickPeek tracker list in the macOS menu bar" width="860">
+</p>
+
+<p align="center">
+  <img src="docs/assets/quickpeek-preview-add-tracker.png" alt="QuickPeek add tracker form with supported services and metrics" width="860">
+</p>
+
 ## Supported Metrics
 
 - GitHub: stars, forks, watchers, open issues, open pull requests
