@@ -6,13 +6,16 @@ It stores trackers locally, refreshes them on demand, and opens the original sou
 
 ## Preview
 
-<p align="center">
-  <img src="docs/assets/quickpeek-preview-trackers.png" alt="QuickPeek tracker list in the macOS menu bar" width="860">
-</p>
-
-<p align="center">
-  <img src="docs/assets/quickpeek-preview-add-tracker.png" alt="QuickPeek add tracker form with supported services and metrics" width="860">
-</p>
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/assets/quickpeek-preview-trackers.png" alt="QuickPeek tracker list in the macOS menu bar">
+    </td>
+    <td width="50%">
+      <img src="docs/assets/quickpeek-preview-add-tracker.png" alt="QuickPeek add tracker form with supported services and metrics">
+    </td>
+  </tr>
+</table>
 
 ## Supported Metrics
 
