@@ -1,18 +1,10 @@
 # QuickPeek
 
-QuickPeek is a tiny macOS menu bar app for people who keep wasting attention on the same pages over and over.
+QuickPeek is a small macOS menu bar app for keeping useful public metrics close without repeatedly opening dashboards and social apps.
 
-GitHub stars. X followers. YouTube subscribers. Bluesky followers. npm downloads. That one post you know is not moving every five minutes, but you still check anyway.
+It stores trackers locally, refreshes them on demand, and opens the original source when you click a tracker.
 
-QuickPeek keeps the numbers in your menu bar so you can stop donating focus to platforms that love being checked.
-
-## Why It Exists
-
-Some metrics matter. Constantly opening five tabs to see whether they changed does not.
-
-QuickPeek gives you one fast place to monitor the public numbers you actually care about, without turning your day into a loop of "just checking something quickly".
-
-## What It Tracks
+## Supported Metrics
 
 - GitHub: stars, forks, watchers, open issues, open pull requests
 - Reddit: subreddit subscribers, user karma, post upvotes
@@ -24,39 +16,43 @@ QuickPeek gives you one fast place to monitor the public numbers you actually ca
 - Discord: member count, online count
 - Instagram: followers, likes, comments
 
-## Why It Feels Safe
+## Privacy
 
-- No backend, no account system, no tracking
+- No backend, account system, analytics, or tracking
 - Tracker data stays on-device in `UserDefaults`
-- Optional API credentials are stored in the macOS Keychain
-- Most sources work without login; optional keys simply improve reliability for supported services
+- Optional YouTube and X credentials are stored in the macOS Keychain
+- API credentials are redacted from request error logs
+- Most sources work without signing in
 
 ## Requirements
 
 - macOS 14.0 or newer
-- Xcode 16.3 or newer if you want to build from source
+- Apple silicon or Intel Mac
+- Xcode 16.3 or newer only when building from source
 
-## Download
+## Download And Install
 
-You can grab the latest `.zip` from [GitHub Releases](https://github.com/dodo-reach/QuickPeek/releases).
+Download the latest `QuickPeek-v*-macOS.zip` and matching `.sha256` file from [GitHub Releases](https://github.com/dodo-reach/QuickPeek/releases).
 
-### About The macOS Warning
+Verify the download from Terminal:
 
-QuickPeek is currently distributed without Apple's paid Developer ID / notarization flow.
+```bash
+shasum -a 256 -c QuickPeek-v*-macOS.zip.sha256
+```
 
-That means macOS may show the classic "Apple could not verify this app" warning the first time you open it. That is annoying, but it does **not** mean the app is malware. It means the app was shipped directly by the developer instead of through Apple's paid trust pipeline.
+Then unzip the archive and move `QuickPeek.app` to `Applications`.
 
-If you want to use QuickPeek, you have two easy options:
+### First Launch
 
-- Download the zip from this repository and open the app with `Right click > Open`
-- If macOS blocks it, go to `System Settings > Privacy & Security` and click `Open Anyway`
+QuickPeek is currently distributed with an ad-hoc signature because the project does not have a paid Apple Developer Program membership. Apple requires a Developer ID certificate for notarization, so this build cannot be notarized.
 
-If that still feels too sketchy for you, that is fair:
+On first launch, macOS may block the app because it cannot verify the developer:
 
-- Build it yourself from source in Xcode
-- Or keep opening the same apps ten times a day to check if a number changed
+1. Right-click `QuickPeek.app` and choose **Open**.
+2. If macOS still blocks it, open **System Settings > Privacy & Security**.
+3. Find the QuickPeek message and choose **Open Anyway**.
 
-QuickPeek is trying to help with the second one. Do what you want now.
+The checksum published with every release lets you verify that the downloaded archive matches the one produced for that release.
 
 ## Build From Source
 
@@ -66,23 +62,33 @@ cd QuickPeek
 ./script/build_and_run.sh
 ```
 
-If `xcodebuild` is pointing at Command Line Tools instead of full Xcode, the script will tell you what to fix.
+To build and confirm that the menu bar process starts:
 
-## Packaging A Release Build
+```bash
+./script/build_and_run.sh --verify
+```
+
+## Package A Release
 
 ```bash
 ./script/package_release.sh
 ```
 
-That generates `dist/QuickPeek-macOS.zip`.
+The script builds a hardened universal Release app, validates its ad-hoc signature and architectures, then creates:
 
-## Notes
+```text
+dist/QuickPeek-v<VERSION>-macOS.zip
+dist/QuickPeek-v<VERSION>-macOS.zip.sha256
+```
 
-- QuickPeek is designed for public metrics, not private dashboard access
-- Some platforms use scraping fallbacks, so they may occasionally break when a site changes
-- TikTok support uses public embed pages only; private or age-restricted profiles/videos are not supported
-- Facebook post/reel likes are intentionally not supported yet because the no-login public path is not stable enough for a trust-first release
-- GitHub release builds are currently not notarized, so first launch on macOS may require `Open Anyway`
+See [docs/distribution.md](docs/distribution.md) for the current distribution model and [docs/release-checklist.md](docs/release-checklist.md) before publishing a release.
+
+## Reliability Notes
+
+- QuickPeek tracks public metrics, not private dashboards.
+- Some sources use public-page scraping fallbacks and can temporarily break when a site changes.
+- TikTok supports public profiles and videos only; private or age-restricted content is not supported.
+- Optional API credentials improve reliability for supported services but are not required.
 
 ## License
 

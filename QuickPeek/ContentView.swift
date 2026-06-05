@@ -2,74 +2,60 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 fileprivate enum QuickPeekLayout {
-    static let windowSize = CGSize(width: 380, height: 480)
-    static let cardCornerRadius: CGFloat = 24
-    static let buttonSize: CGFloat = 40
-    static let overlaySize = CGSize(width: 352, height: 432)
+    static let windowSize = CGSize(width: 400, height: 520)
+    static let cardCornerRadius: CGFloat = 18
 }
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: TrackerViewModel
-    @State private var overlayMode: OverlayMode? = nil
+    @State private var presentedPanel: PresentedPanel?
     @State private var hoveredID: UUID? = nil
     @State private var draggingItem: Tracker?
     
-    enum OverlayMode: Identifiable {
+    enum PresentedPanel {
         case add, settings
-        var id: Int { hashValue }
     }
+
     var body: some View {
-        ZStack {
-            windowBackground
+        Group {
+            switch presentedPanel {
+            case .add:
+                AddTrackerSheet(onDismiss: dismissPanel)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            case .settings:
+                SettingsSheet(onDismiss: dismissPanel)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            case nil:
+                VStack(spacing: 0) {
+                    header
 
-            VStack(spacing: 0) {
-                header
-
-                Group {
-                    if viewModel.trackers.isEmpty {
-                        emptyState
-                    } else {
-                        trackersList
+                    Group {
+                        if viewModel.trackers.isEmpty {
+                            emptyState
+                        } else {
+                            trackersList
+                        }
                     }
                 }
-
-                footer
-            }
-            .frame(width: QuickPeekLayout.windowSize.width, height: QuickPeekLayout.windowSize.height)
-            
-            if let mode = overlayMode {
-                Color.black.opacity(0.4)
-                    .transition(.opacity)
-                    .onTapGesture { withAnimation(.spring()) { overlayMode = nil } }
-                
-                Group {
-                    switch mode {
-                    case .add:
-                        AddTrackerSheet(onDismiss: {
-                            withAnimation(.spring()) { overlayMode = nil }
-                        })
-                    case .settings:
-                        SettingsSheet(onDismiss: {
-                            withAnimation(.spring()) { overlayMode = nil }
-                        })
-                    }
-                }
-                .frame(width: QuickPeekLayout.overlaySize.width, height: QuickPeekLayout.overlaySize.height)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(1)
+                .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
         .frame(width: QuickPeekLayout.windowSize.width, height: QuickPeekLayout.windowSize.height)
     }
     
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: "chart.bar.xaxis")
-                .font(.title2)
-                .foregroundStyle(Color.accentColor)
+                .font(.title3)
+                .foregroundStyle(.tint)
             
-            Text("QuickPeek")
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("QuickPeek")
+                    .font(.headline)
+                Text(viewModel.trackers.isEmpty ? "No trackers" : "\(viewModel.trackers.count) trackers")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             
             Spacer()
             
@@ -77,18 +63,45 @@ struct ContentView: View {
                 ProgressView()
                     .controlSize(.small)
             }
+
+            Button {
+                Task { await viewModel.refreshAll() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(viewModel.trackers.isEmpty || !viewModel.refreshingTrackerIDs.isEmpty)
+            .help("Synchronize All Metrics")
+
+            Button {
+                presentPanel(.settings)
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Settings")
+
+            Button {
+                presentPanel(.add)
+            } label: {
+                Label("Add", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .help("Monitor New Project")
         }
-        .padding()
-        .background(.ultraThinMaterial.opacity(0.85))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .overlay(alignment: .bottom) {
             Divider()
-                .overlay(.white.opacity(0.05))
         }
     }
     
     private var trackersList: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            LazyVStack(spacing: 10) {
                 ForEach(viewModel.trackers) { tracker in
                     TrackerCard(tracker: tracker,
                                 isRefreshing: viewModel.refreshingTrackerIDs.contains(tracker.id),
@@ -117,85 +130,39 @@ struct ContentView: View {
                         }
                 }
             }
-            .padding(16)
-            .animation(.spring(), value: viewModel.trackers)
+            .padding(12)
+            .animation(.snappy, value: viewModel.trackers)
         }
-        .scrollIndicators(.hidden)
     }
     
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "plus.circle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary.opacity(0.3))
-            
-            Text("Ready to track?")
-                .font(.headline)
-            
-            Text("Add your first public metric from GitHub, Reddit, YouTube, TikTok, or Bluesky to begin monitoring your growth.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 40)
-            
-            Button("Add First Project") {
-                withAnimation(.spring()) { overlayMode = .add }
+            ContentUnavailableView {
+                Label("Ready to track?", systemImage: "chart.line.uptrend.xyaxis")
+            } description: {
+                Text("Keep public metrics close without reopening every dashboard.")
+            } actions: {
+                Button("Add First Tracker") {
+                    presentPanel(.add)
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             
             Spacer()
-        }
-    }
-    
-    private var footer: some View {
-        HStack(spacing: 20) {
-            Button(action: { withAnimation(.spring()) { overlayMode = .add } }) {
-                Image(systemName: "plus")
-                    .font(.headline)
-                    .frame(width: QuickPeekLayout.buttonSize, height: QuickPeekLayout.buttonSize)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Monitor New Project")
-            
-            Button(action: { Task { await viewModel.refreshAll() } }) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.subheadline)
-                    .frame(width: QuickPeekLayout.buttonSize, height: QuickPeekLayout.buttonSize)
-                    .background(Color.primary.opacity(0.05))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Synchronize All Metrics")
-            
-            Spacer()
-            
-            Button(action: { withAnimation(.spring()) { overlayMode = .settings } }) {
-                Image(systemName: "gearshape")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Settings")
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial.opacity(0.7))
-        .overlay(alignment: .top) {
-            Divider()
-                .overlay(.white.opacity(0.04))
         }
     }
 
-    private var windowBackground: some View {
-        Rectangle()
-            .fill(Color(nsColor: .windowBackgroundColor).opacity(0.97))
-            .background(.ultraThinMaterial.opacity(0.9))
+    private func presentPanel(_ panel: PresentedPanel) {
+        withAnimation(.snappy) {
+            presentedPanel = panel
+        }
+    }
+
+    private func dismissPanel() {
+        withAnimation(.snappy) {
+            presentedPanel = nil
+        }
     }
 }
 
@@ -209,11 +176,10 @@ struct TrackerCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 Image(systemName: tracker.type.icon)
-                    .font(.title2)
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(tracker.isError ? Color.red : Color.accentColor)
-                    .frame(width: 32, height: 32)
-                    .background(Color.accentColor.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(width: 30, height: 30)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tracker.name)
@@ -283,17 +249,18 @@ struct TrackerCard: View {
                 .padding(.top, -4)
             }
         }
-        .padding(16)
-        .background(isHovered ? Color.primary.opacity(0.08) : Color.primary.opacity(0.045))
-        .clipShape(RoundedRectangle(cornerRadius: QuickPeekLayout.cardCornerRadius, style: .continuous))
+        .padding(14)
+        .background(
+            isHovered ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.thinMaterial),
+            in: RoundedRectangle(cornerRadius: QuickPeekLayout.cardCornerRadius, style: .continuous)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: QuickPeekLayout.cardCornerRadius, style: .continuous)
                 .stroke(
-                    tracker.isError ? Color.red.opacity(0.2) : Color.white.opacity(isHovered ? 0.12 : 0.06),
+                    tracker.isError ? Color.red.opacity(0.3) : Color.primary.opacity(isHovered ? 0.14 : 0.07),
                     lineWidth: 1
                 )
         )
-        .scaleEffect(isHovered ? 1.01 : 1.0)
     }
     
     @ViewBuilder

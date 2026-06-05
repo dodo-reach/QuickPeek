@@ -271,7 +271,7 @@ struct MetricService {
             let retryAfter = httpResponse.value(forHTTPHeaderField: "Retry-After")
             let remaining = httpResponse.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "-"
             let resource = httpResponse.value(forHTTPHeaderField: "X-RateLimit-Resource") ?? "-"
-            logger.error("HTTP request failed status=\(httpResponse.statusCode) url=\(url.absoluteString, privacy: .public) rateRemaining=\(remaining, privacy: .public) resource=\(resource, privacy: .public) retryAfter=\((retryAfter ?? "-"), privacy: .public)")
+            logger.error("HTTP request failed status=\(httpResponse.statusCode) url=\(redactedURLString(url), privacy: .public) rateRemaining=\(remaining, privacy: .public) resource=\(resource, privacy: .public) retryAfter=\((retryAfter ?? "-"), privacy: .public)")
 
             if httpResponse.statusCode == 403 || httpResponse.statusCode == 429 {
                 throw APIError.rateLimited(status: httpResponse.statusCode, retryAfter: retryAfter)
@@ -280,6 +280,20 @@ struct MetricService {
             throw APIError.http(httpResponse.statusCode)
         }
         return data
+    }
+
+    private static func redactedURLString(_ url: URL) -> String {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url.host ?? "<invalid-url>"
+        }
+
+        components.queryItems = components.queryItems?.map { item in
+            let sensitiveNames = ["key", "token", "access_token", "api_key"]
+            return sensitiveNames.contains(item.name.lowercased())
+                ? URLQueryItem(name: item.name, value: "<redacted>")
+                : item
+        }
+        return components.string ?? url.host ?? "<invalid-url>"
     }
 
     private static func retrying<T>(_ operation: String, for subject: String, maxAttempts: Int = 3, action: @escaping () async throws -> T) async throws -> T {

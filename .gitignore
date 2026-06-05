@@ -63,5 +63,6 @@ fastlane/test_output
 .codex/
 dist/
 *.xcresult
+*.profraw
 *.tmproj
 *.xcworkspace/xcshareddata/SwiftPM/package.resolved

@@ -27,26 +27,7 @@ class TrackerViewModel: ObservableObject {
         do {
             let loadedTrackers = try JSONDecoder().decode([Tracker].self, from: data)
             
-            // Merge logical duplicates that point to the same source entity.
-            var mergedMap = [String: Tracker]()
-            for tracker in loadedTrackers {
-                let key = Self.trackerIdentityKey(type: tracker.type, input: tracker.urlOrID, categories: tracker.metrics.map(\.category))
-                if var existing = mergedMap[key] {
-                    // Combine metrics, avoiding duplicates by category label
-                    for metric in tracker.metrics {
-                        if !existing.metrics.contains(where: { $0.category == metric.category }) {
-                            existing.metrics.append(metric)
-                        }
-                    }
-                    mergedMap[key] = existing
-                } else {
-                    mergedMap[key] = tracker
-                }
-            }
-            
-            // Re-sort merged trackers according to their original appearance if possible, 
-            // but for simplicity we'll just use the values
-            trackers = Array(mergedMap.values).sorted(by: { $0.lastUpdated ?? Date() > $1.lastUpdated ?? Date() })
+            trackers = Self.mergeTrackersPreservingOrder(loadedTrackers)
         } catch {
             print("Error loading trackers: \(error)")
         }
@@ -344,6 +325,26 @@ class TrackerViewModel: ObservableObject {
         }
 
         return "\(type.rawValue)|\(selectionGroup.rawValue)|\(normalizedInput)"
+    }
+
+    static func mergeTrackersPreservingOrder(_ trackers: [Tracker]) -> [Tracker] {
+        var mergedTrackers = [Tracker]()
+        var indexByIdentity = [String: Int]()
+
+        for tracker in trackers {
+            let key = trackerIdentityKey(type: tracker.type, input: tracker.urlOrID, categories: tracker.metrics.map(\.category))
+            guard let existingIndex = indexByIdentity[key] else {
+                indexByIdentity[key] = mergedTrackers.count
+                mergedTrackers.append(tracker)
+                continue
+            }
+
+            for metric in tracker.metrics where !mergedTrackers[existingIndex].metrics.contains(where: { $0.category == metric.category }) {
+                mergedTrackers[existingIndex].metrics.append(metric)
+            }
+        }
+
+        return mergedTrackers
     }
 
     private func loadSecrets() {

@@ -10,183 +10,124 @@ struct AddTrackerSheet: View {
     @State private var customName = ""
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             HStack {
-                Text("Monitor New Project")
+                Text("Add Tracker")
                     .font(.title2.bold())
                 Spacer()
-                Button(action: onDismiss) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+                Button("Cancel", action: onDismiss)
             }
-            .padding(.top)
+            .padding(20)
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    sectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("SERVICE")
-                                .font(.caption2.bold())
-                                .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Service")
+                            .font(.headline)
 
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(MetricType.allCases) { type in
-                                    Button(action: {
-                                        selectedType = type
-                                        selectedCategories = [type.availableCategories.first ?? .githubStars]
-                                    }) {
-                                        VStack(spacing: 8) {
-                                            Image(systemName: type.icon)
-                                                .font(.title2)
-                                            Text(type.displayName)
-                                                .font(.system(size: 10, weight: .bold))
-                                        }
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92))], spacing: 8) {
+                            ForEach(MetricType.allCases) { type in
+                                Button {
+                                    selectedType = type
+                                    selectedCategories = [type.availableCategories.first ?? .githubStars]
+                                } label: {
+                                    Label(type.displayName, systemImage: type.icon)
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                        .background(selectedType == type ? Color.accentColor : Color.primary.opacity(0.05))
-                                        .foregroundStyle(selectedType == type ? .white : .primary)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-
-                    sectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(selectedType.hasExclusiveSourceModes ? "METRICS" : "METRICS TO TRACK")
-                                .font(.caption2.bold())
-                                .foregroundStyle(.secondary)
-
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(selectedType.availableCategories) { category in
-                                        Button(action: {
-                                            toggleCategory(category)
-                                        }) {
-                                            Text(category.label)
-                                                .font(.system(size: 11, weight: .bold))
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(selectedCategories.contains(category) ? Color.accentColor : Color.primary.opacity(0.05))
-                                                .foregroundStyle(selectedCategories.contains(category) ? .white : .primary)
-                                                .clipShape(Capsule())
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                        .foregroundStyle(selectedType == type ? Color.white : Color.primary)
+                                        .background(
+                                            selectedType == type ? Color.accentColor : Color.primary.opacity(0.06),
+                                            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        )
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                                .strokeBorder(
+                                                    selectedType == type ? Color.accentColor : Color.primary.opacity(0.12),
+                                                    lineWidth: 1
+                                                )
                                         }
-                                        .buttonStyle(.plain)
-                                    }
                                 }
-                            }
-
-                            if let compatibilityNote {
-                                Text(compatibilityNote)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                .buttonStyle(.plain)
+                                .controlSize(.small)
                             }
                         }
                     }
 
-                    sectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(inputLabel)
-                                .font(.caption2.bold())
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(selectedType.hasExclusiveSourceModes ? "Metric" : "Metrics to Track")
+                            .font(.headline)
 
-                            TextField(inputPlaceholder, text: $urlOrID)
-                                .textFieldStyle(.plain)
-                                .padding(12)
-                                .background(Color.primary.opacity(0.05))
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .onChange(of: urlOrID) { oldValue, newValue in
-                                    autoDetect(newValue)
-                                }
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)], alignment: .leading, spacing: 8) {
+                            ForEach(selectedType.availableCategories) { category in
+                                Toggle(category.label, isOn: Binding(
+                                    get: { selectedCategories.contains(category) },
+                                    set: { _ in toggleCategory(category) }
+                                ))
+                                .toggleStyle(.button)
+                                .controlSize(.small)
+                            }
+                        }
+
+                        if let compatibilityNote {
+                            Text(compatibilityNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 
-                    sectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("DISPLAY NAME")
-                                .font(.caption2.bold())
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(inputLabel.capitalized)
+                            .font(.headline)
 
-                            TextField("Optional nickname", text: $customName)
-                                .textFieldStyle(.plain)
-                                .padding(12)
-                                .background(Color.primary.opacity(0.05))
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
+                        TextField(inputPlaceholder, text: $urlOrID)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: urlOrID) { _, newValue in
+                                autoDetect(newValue)
+                            }
+
+                        Text(helpText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
-                    Text(helpText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, -8)
-                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Display Name")
+                            .font(.headline)
+
+                        TextField("Optional nickname", text: $customName)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
                     if selectedType == .instagram || selectedType == .tiktok {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                            Text(selectedType == .tiktok ? "Only public profiles/videos are supported." : "Only public accounts/posts are supported.")
-                                .font(.caption.bold())
-                                .foregroundStyle(.orange)
-                        }
-                        .padding(.top, -12)
+                        Label(
+                            selectedType == .tiktok ? "Only public profiles and videos are supported." : "Only public accounts and posts are supported.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            
-            Spacer()
-            
-            Button(action: {
-                let orderedCategories = selectedType.availableCategories.filter { selectedCategories.contains($0) }
-                viewModel.addTracker(urlOrID: urlOrID, type: selectedType, categories: orderedCategories, customName: customName)
-                onDismiss()
-            }) {
-                Text("Start Tracking")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(urlOrID.isEmpty ? Color.gray : Color.accentColor)
-                    .cornerRadius(12)
-                    .shadow(color: (urlOrID.isEmpty ? Color.clear : Color.accentColor).opacity(0.3), radius: 8, y: 4)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Start Tracking") {
+                    let orderedCategories = selectedType.availableCategories.filter { selectedCategories.contains($0) }
+                    viewModel.addTracker(urlOrID: urlOrID, type: selectedType, categories: orderedCategories, customName: customName)
+                    onDismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(urlOrID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .buttonStyle(.plain)
-            .disabled(urlOrID.isEmpty)
+            .padding(20)
         }
-        .padding(24)
-        .background(sheetBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.22), radius: 24, y: 16)
-        .compositingGroup()
-    }
-
-    private var sheetBackground: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .fill(Color(nsColor: .windowBackgroundColor).opacity(0.98))
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.regularMaterial.opacity(0.96))
-            )
-    }
-
-    private func sectionCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.04))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(.white.opacity(0.05), lineWidth: 1)
-            )
     }
 
     private func toggleCategory(_ category: MetricCategory) {

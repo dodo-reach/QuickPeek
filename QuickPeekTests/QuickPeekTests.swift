@@ -8,6 +8,7 @@
 import Testing
 @testable import QuickPeek
 
+@MainActor
 struct QuickPeekTests {
 
     @Test func cleanYouTubeIdentifierKeepsChannelID() async throws {
@@ -88,6 +89,32 @@ struct QuickPeekTests {
 
         #expect(shortURL == watchURL)
         #expect(tikTokURL == tikTokEmbed)
+    }
+
+    @Test func mergingTrackersPreservesSavedOrderAndCombinesMetrics() async throws {
+        let first = Tracker(
+            name: "First",
+            urlOrID: "owner/first",
+            type: .github,
+            metrics: [MetricValue(category: .githubStars)]
+        )
+        let second = Tracker(
+            name: "Second",
+            urlOrID: "owner/second",
+            type: .github,
+            metrics: [MetricValue(category: .githubStars)]
+        )
+        let duplicateFirst = Tracker(
+            name: "First duplicate",
+            urlOrID: "https://github.com/owner/first",
+            type: .github,
+            metrics: [MetricValue(category: .githubForks)]
+        )
+
+        let merged = TrackerViewModel.mergeTrackersPreservingOrder([second, first, duplicateFirst])
+
+        #expect(merged.map(\.name) == ["Second", "First"])
+        #expect(merged[1].metrics.map(\.category) == [.githubStars, .githubForks])
     }
 
 }

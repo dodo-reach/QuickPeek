@@ -3,7 +3,6 @@ import Foundation
 // MARK: - Generic
 enum APIError: LocalizedError {
     case badURL
-    case missingKey(String)
     case http(Int)
     case rateLimited(status: Int, retryAfter: String?)
     case sourceFormatChanged(source: String, detail: String)
@@ -13,7 +12,6 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .badURL: return "Invalid URL or ID"
-        case .missingKey(let platform): return "Missing API Key for \(platform)"
         case .http(let status): return "Server error: \(status)"
         case .rateLimited(let status, let retryAfter):
             if let retryAfter, !retryAfter.isEmpty {
